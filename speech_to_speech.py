@@ -39,7 +39,7 @@ def process_input(
     messages: list,
     generator: VoiceGenerator,
     speed: float,
-) -> tuple[bool, None]:
+) -> tuple[bool, str]:
     """Processes user input, generates a response, and handles audio output.
 
     Args:
@@ -50,7 +50,7 @@ def process_input(
         speed (float): The playback speed.
 
     Returns:
-        tuple[bool, None]: A tuple containing a boolean indicating if the process was interrupted and None.
+        tuple[bool, str]: A tuple containing a boolean indicating if the process was interrupted and the AI's response text.
     """
     global timing_info
     timing_info = {k: None for k in timing_info}
@@ -71,7 +71,7 @@ def process_input(
 
         if not response_stream:
             print("Failed to get AI response stream.")
-            return False, None
+            return False, "I'm sorry, I couldn't process your request."
 
         audio_queue = AudioGenerationQueue(generator, speed)
         audio_queue.start()
@@ -113,7 +113,8 @@ def process_input(
                     complete_response.append(final_text)
                 break
 
-        messages.append({"role": "assistant", "content": " ".join(complete_response)})
+        full_response = " ".join(complete_response)
+        messages.append({"role": "assistant", "content": full_response})
         print()
 
         time.sleep(0.1)
@@ -129,13 +130,13 @@ def process_input(
 
         timing_info["end"] = time.perf_counter()
         print_timing_chart(timing_info)
-        return False, None
+        return False, full_response
 
     except Exception as e:
         print(f"\nError during streaming: {str(e)}")
         if "audio_queue" in locals():
             audio_queue.stop()
-        return False, None
+        return False, f"I encountered an error: {str(e)}"
 
 
 def audio_playback_worker(audio_queue) -> tuple[bool, None]:

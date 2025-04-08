@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech To Speech Model</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        .message {
+            max-width: 80%;
+            margin: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            white-space: pre-wrap;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: auto;
+        }
+        .ai-message {
+            background-color: #f5f5f5;
+            margin-right: auto;
+        }
+        .recording-indicator {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .typing-indicator {
+            display: inline-block;
+            margin-left: 5px;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-right: 2px;
+            background-color: #666;
+            border-radius: 50%;
+            animation: typing 1s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Speech To Speech Model</h1>
+        
+        <div class="bg-white rounded-lg shadow-lg p-4 chat-container overflow-y-auto" id="chatContainer">
+            <!-- Messages will be added here -->
+        </div>
+
+        <div class="mt-4 flex justify-center space-x-4">
+            <button id="startRecording" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                Start Recording
+            </button>
+            <button id="stopRecording" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded hidden">
+                Stop Recording
+            </button>
+        </div>
+
+        <div id="status" class="mt-4 text-center"></div>
+    </div>
+
+    <script>
+        // Get the current port from the URL
+        const port = window.location.port;
+        const socket = io('http://localhost:' + port);
+        
+        const chatContainer = document.getElementById('chatContainer');
+        const startButton = document.getElementById('startRecording');
+        const stopButton = document.getElementById('stopRecording');
+        const statusDiv = document.getElementById('status');
+        let isTyping = false;
+
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            if (!isTyping) {
+                isTyping = true;
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'message ai-message';
+                typingDiv.id = 'typingIndicator';
+                typingDiv.innerHTML = 'AI is thinking <span class="typing-indicator"><span></span><span></span><span></span></span>';
+                chatContainer.appendChild(typingDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+            isTyping = false;
+        }
+
+        startButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/start_recording', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (data.status === 'recording started') {
+                    startButton.classList.add('hidden');
+                    stopButton.classList.remove('hidden');
+                    statusDiv.textContent = 'Recording...';
+                    statusDiv.classList.add('recording-indicator');
+                }
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                statusDiv.textContent = 'Error starting recording. Please try again.';
+            }
+        });
+
+        stopButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/stop_recording', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (data.status === 'recording stopped') {
+                    stopButton.classList.add('hidden');
+                    startButton.classList.remove('hidden');
+                    statusDiv.textContent = '';
+                    statusDiv.classList.remove('recording-indicator');
+                }
+            } catch (error) {
+                console.error('Error stopping recording:', error);
+                statusDiv.textContent = 'Error stopping recording. Please try again.';
+            }
+        });
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            statusDiv.textContent = 'Connected to server';
+            setTimeout(() => {
+                statusDiv.textContent = '';
+            }, 2000);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            statusDiv.textContent = 'Disconnected from server';
+            startButton.classList.add('hidden');
+            stopButton.classList.add('hidden');
+        });
+
+        socket.on('user_message', (data) => {
+            addMessage(data.text, true);
+        });
+
+        socket.on('ai_thinking', () => {
+            showTypingIndicator();
+        });
+
+        socket.on('ai_message', (data) => {
+            hideTypingIndicator();
+            addMessage(data.text, false);
+        });
+
+        socket.on('interrupted', (data) => {
+            hideTypingIndicator();
+            statusDiv.textContent = data.message;
+            setTimeout(() => {
+                statusDiv.textContent = 'Recording...';
+            }, 2000);
+        });
+
+        socket.on('error', (data) => {
+            hideTypingIndicator();
+            statusDiv.textContent = `Error: ${data.message}`;
+            statusDiv.classList.remove('recording-indicator');
+            stopButton.classList.add('hidden');
+            startButton.classList.remove('hidden');
+        });
+    </script>
+</body>
+</html> 
