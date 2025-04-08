@@ -1,0 +1,17 @@
+keyboard
+phonemizer
+torch
+transformers
+scipy
+munch
+sounddevice
+python-multipart
+soundfile
+pydantic
+requests
+python-dotenv
+numpy
+pyaudio
+pyannote.audio
+torch_audiomentations
+pydantic_settings
