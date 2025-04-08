@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./models:/app/models
+      - ./voices:/app/voices
+    environment:
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+      - WHISPER_MODEL=${WHISPER_MODEL:-openai/whisper-base}
+      - TTS_MODEL=${TTS_MODEL:-tts_models/en/ljspeech/tacotron2-DDC}
+      - VOICE_NAME=${VOICE_NAME:-default}
+      - SPEED=${SPEED:-1.0}
+      - LLM_MODEL=${LLM_MODEL:-llama2}
+      - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
+      - MAX_TOKENS=${MAX_TOKENS:-1000}
+    restart: unless-stopped 

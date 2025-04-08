@@ -82,7 +82,7 @@ When processing text, the `TextChunker` uses a priority-based system:
 The text chunking method significantly reduces perceived latency by processing and delivering the first chunk of text as soon as it becomes available. Let's consider a hypothetical system where the language model generates responses at a certain rate. If we imagine a scenario where the model produces a response of N words at a rate of R words per second, waiting for the complete response would introduce a delay of N/R seconds before any audio is produced. With text chunking, the system can start processing the first M words as soon as they are ready (after M/R seconds), while the remaining words continue to be generated. This means the user hears the initial part of the response in just M/R seconds, while the rest streams in naturally.
 
 ### Leading filler word LLM Prompting
-We use a another little trick in the LLM prompt to speed up the system’s first response. We ask the LLM to start its reply with filler words like “umm,” “so,” or “well.” These words have a special role in language: they create natural pauses and breaks. Since these are single-word responses, they take only milliseconds to convert to audio. When we apply our chunking rules, the system splits the response at the filler word (e.g., “umm,”) and sends that tiny chunk to the TTS engine. This lets the bot play the audio for “umm” almost instantly, reducing perceived latency. The filler words act as natural “bridges” to mask processing delays. Even a short “umm” gives the illusion of a fluid conversation, while the system works on generating the rest of the response in the background. Longer chunks after the filler word might take more time to process, but the initial pause feels intentional and human-like.
+We use a another little trick in the LLM prompt to speed up the system's first response. We ask the LLM to start its reply with filler words like "umm," "so," or "well." These words have a special role in language: they create natural pauses and breaks. Since these are single-word responses, they take only milliseconds to convert to audio. When we apply our chunking rules, the system splits the response at the filler word (e.g., "umm,") and sends that tiny chunk to the TTS engine. This lets the bot play the audio for "umm" almost instantly, reducing perceived latency. The filler words act as natural "bridges" to mask processing delays. Even a short "umm" gives the illusion of a fluid conversation, while the system works on generating the rest of the response in the background. Longer chunks after the filler word might take more time to process, but the initial pause feels intentional and human-like.
 
 We have fallback plans for cases when the LLM fails to start its response with fillers. In those cases, we put hand breaks at 2 to 5 words, which comes with a cost of a bit of choppiness at the beginning but that feels less painful than the system taking a long time to give the first response.
 
@@ -104,3 +104,122 @@ This project draws inspiration and guidance from the following articles and repo
 *   [Building Production-Ready TTS with Kokoro-82M](https://medium.com/@simeon.emanuilov/kokoro-82m-building-production-ready-tts-with-82m-parameters-unfoldai-98e36ff286b9)
 *   [Kokoro-82M: The Best TTS Model in Just 82 Million Parameters](https://medium.com/data-science-in-your-pocket/kokoro-82m-the-best-tts-model-in-just-82-million-parameters-512b4ba4f94c)
 *   [StyleTTS2 Model Implementation](https://github.com/yl4579/StyleTTS2/blob/main/models.py)
+
+# Speech To Speech Model
+
+A real-time speech-to-speech conversational AI application with web interface.
+
+## Prerequisites
+
+- Docker and Docker Compose
+- Hugging Face account and API token
+- Ollama (for running the LLM locally)
+
+## Quick Start
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd <repository-name>
+```
+
+2. Copy the environment template and fill in your values:
+```bash
+cp .env.example .env
+```
+
+3. Edit the `.env` file with your configuration:
+- Add your Hugging Face token
+- Configure model paths and settings
+- Set up Ollama URL if running locally
+
+4. Start the application using Docker Compose:
+```bash
+docker-compose up --build
+```
+
+5. Access the application at `http://localhost:5000`
+
+## Deployment Options
+
+### 1. Local Deployment with Docker
+
+```bash
+# Build and run the container
+docker-compose up --build
+
+# To stop the application
+docker-compose down
+```
+
+### 2. Cloud Deployment
+
+#### Option A: Using a Cloud Provider with Docker Support
+
+1. Choose a cloud provider (AWS, Google Cloud, Azure, etc.)
+2. Set up a virtual machine or container service
+3. Push your Docker image to a container registry
+4. Deploy using the cloud provider's container service
+
+#### Option B: Using a Platform as a Service (PaaS)
+
+1. Choose a PaaS provider (Heroku, Railway, etc.)
+2. Connect your repository
+3. Configure environment variables
+4. Deploy the application
+
+## Configuration
+
+### Environment Variables
+
+- `HUGGINGFACE_TOKEN`: Your Hugging Face API token
+- `WHISPER_MODEL`: Whisper model to use for speech recognition
+- `TTS_MODEL`: Text-to-speech model to use
+- `VOICE_NAME`: Voice to use for speech synthesis
+- `SPEED`: Speech playback speed
+- `LLM_MODEL`: Language model to use
+- `OLLAMA_URL`: URL of the Ollama server
+- `MAX_TOKENS`: Maximum tokens for LLM responses
+
+### Model Files
+
+Place your model files in the following directories:
+- `models/`: For TTS and Whisper models
+- `voices/`: For voice files
+
+## Troubleshooting
+
+1. **Audio Issues**
+   - Ensure your system has audio input/output devices
+   - Check Docker audio permissions
+   - Verify portaudio is properly installed
+
+2. **Model Loading Issues**
+   - Check model paths in configuration
+   - Verify Hugging Face token
+   - Ensure sufficient disk space for models
+
+3. **Connection Issues**
+   - Check Ollama server is running
+   - Verify network connectivity
+   - Check firewall settings
+
+## Security Considerations
+
+1. Use HTTPS in production
+2. Implement proper authentication
+3. Secure sensitive environment variables
+4. Regularly update dependencies
+5. Monitor resource usage
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+[Your chosen license]
