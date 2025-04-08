@@ -79,14 +79,26 @@ def recording_worker():
                     user_input = transcribe_audio(whisper_processor, whisper_model, speech_segments)
                     if user_input.strip():
                         socketio.emit('user_message', {'text': user_input})
-                        socketio.emit('ai_thinking')
+                        
+                        # Create a message div for the AI response
+                        message_id = f"ai_message_{int(time.time() * 1000)}"
+                        socketio.emit('ai_message_start', {'id': message_id})
+                        
+                        def text_callback(text):
+                            socketio.emit('ai_message_chunk', {'id': message_id, 'text': text})
                         
                         # Process the input and get the response
-                        was_interrupted, response = process_input(session, user_input, messages, generator, settings.SPEED)
+                        was_interrupted, response = process_input(
+                            session, 
+                            user_input, 
+                            messages, 
+                            generator, 
+                            settings.SPEED,
+                            text_callback=text_callback
+                        )
                         
-                        # Emit the complete response
-                        if response:
-                            socketio.emit('ai_message', {'text': response})
+                        # Emit the complete message
+                        socketio.emit('ai_message_complete', {'id': message_id})
                         
                         if was_interrupted:
                             socketio.emit('interrupted', {'message': 'User interrupted the response'})

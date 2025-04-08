@@ -39,6 +39,7 @@ def process_input(
     messages: list,
     generator: VoiceGenerator,
     speed: float,
+    text_callback=None,
 ) -> tuple[bool, str]:
     """Processes user input, generates a response, and handles audio output.
 
@@ -48,6 +49,7 @@ def process_input(
         messages (list): The list of messages to send to the LLM.
         generator (VoiceGenerator): The voice generator object.
         speed (float): The playback speed.
+        text_callback (callable, optional): Callback function to handle streaming text.
 
     Returns:
         tuple[bool, str]: A tuple containing a boolean indicating if the process was interrupted and the AI's response text.
@@ -57,7 +59,6 @@ def process_input(
     timing_info["vad_start"] = time.perf_counter()
 
     messages.append({"role": "user", "content": user_input})
-    print("\nThinking...")
     start_time = time.time()
     try:
         response_stream = get_ai_response(
@@ -77,6 +78,7 @@ def process_input(
         audio_queue.start()
         chunker = TextChunker()
         complete_response = []
+        current_response = ""
 
         playback_thread = threading.Thread(
             target=lambda: audio_playback_worker(audio_queue)
@@ -96,6 +98,9 @@ def process_input(
                     if not timing_info["llm_first_token"]:
                         timing_info["llm_first_token"] = time.perf_counter()
                     print(content, end="", flush=True)
+                    current_response += content
+                    if text_callback:
+                        text_callback(content)
                     chunker.current_text.append(content)
 
                     text = "".join(chunker.current_text)
@@ -130,7 +135,7 @@ def process_input(
 
         timing_info["end"] = time.perf_counter()
         print_timing_chart(timing_info)
-        return False, full_response
+        return False, current_response
 
     except Exception as e:
         print(f"\nError during streaming: {str(e)}")

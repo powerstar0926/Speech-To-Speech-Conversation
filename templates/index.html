@@ -33,25 +33,6 @@
             50% { opacity: 0.5; }
             100% { opacity: 1; }
         }
-        .typing-indicator {
-            display: inline-block;
-            margin-left: 5px;
-        }
-        .typing-indicator span {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            margin-right: 2px;
-            background-color: #666;
-            border-radius: 50%;
-            animation: typing 1s infinite;
-        }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -83,7 +64,6 @@
         const startButton = document.getElementById('startRecording');
         const stopButton = document.getElementById('stopRecording');
         const statusDiv = document.getElementById('status');
-        let isTyping = false;
 
         function addMessage(text, isUser = false) {
             const messageDiv = document.createElement('div');
@@ -91,26 +71,7 @@
             messageDiv.textContent = text;
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function showTypingIndicator() {
-            if (!isTyping) {
-                isTyping = true;
-                const typingDiv = document.createElement('div');
-                typingDiv.className = 'message ai-message';
-                typingDiv.id = 'typingIndicator';
-                typingDiv.innerHTML = 'AI is thinking <span class="typing-indicator"><span></span><span></span><span></span></span>';
-                chatContainer.appendChild(typingDiv);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-        }
-
-        function hideTypingIndicator() {
-            const typingIndicator = document.getElementById('typingIndicator');
-            if (typingIndicator) {
-                typingIndicator.remove();
-            }
-            isTyping = false;
+            return messageDiv;
         }
 
         startButton.addEventListener('click', async () => {
@@ -174,17 +135,31 @@
             addMessage(data.text, true);
         });
 
-        socket.on('ai_thinking', () => {
-            showTypingIndicator();
+        // Handle streaming AI messages
+        const aiMessages = new Map();
+
+        socket.on('ai_message_start', (data) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.id = data.id;
+            messageDiv.className = 'message ai-message';
+            chatContainer.appendChild(messageDiv);
+            aiMessages.set(data.id, messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         });
 
-        socket.on('ai_message', (data) => {
-            hideTypingIndicator();
-            addMessage(data.text, false);
+        socket.on('ai_message_chunk', (data) => {
+            const messageDiv = aiMessages.get(data.id);
+            if (messageDiv) {
+                messageDiv.textContent += data.text;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        });
+
+        socket.on('ai_message_complete', (data) => {
+            aiMessages.delete(data.id);
         });
 
         socket.on('interrupted', (data) => {
-            hideTypingIndicator();
             statusDiv.textContent = data.message;
             setTimeout(() => {
                 statusDiv.textContent = 'Recording...';
@@ -192,7 +167,6 @@
         });
 
         socket.on('error', (data) => {
-            hideTypingIndicator();
             statusDiv.textContent = `Error: ${data.message}`;
             statusDiv.classList.remove('recording-indicator');
             stopButton.classList.add('hidden');
