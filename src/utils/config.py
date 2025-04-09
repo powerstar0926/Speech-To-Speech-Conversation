@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     FIRST_SENTENCE_SIZE: int = Field(default=3, env="FIRST_SENTENCE_SIZE")
     PLAYBACK_DELAY: float = Field(default=0.005, env="PLAYBACK_DELAY")
 
+    # Google TTS settings
+    GOOGLE_API_KEY: str = Field(..., env="GOOGLE_API_KEY")
+    GOOGLE_API_BASE_URL: str = Field(..., env="GOOGLE_API_BASE_URL")
+
     def setup_directories(self):
         """Create necessary directories if they don't exist"""
         self.MODELS_DIR.mkdir(parents=True, exist_ok=True)

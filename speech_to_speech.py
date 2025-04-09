@@ -195,7 +195,8 @@ def main():
     with requests.Session() as session:
         try:
             session = requests.Session()
-            generator = VoiceGenerator(settings.MODELS_DIR, settings.VOICES_DIR)
+            # Initialize Google TTS with API key
+            generator = VoiceGenerator(settings.GOOGLE_API_KEY, settings.GOOGLE_API_BASE_URL)
             messages = [{"role": "system", "content": settings.DEFAULT_SYSTEM_PROMPT}]
             print("\nInitializing Whisper model...")
             whisper_processor = WhisperProcessor.from_pretrained(settings.WHISPER_MODEL)
@@ -205,9 +206,9 @@ def main():
             print("\nInitializing Voice Activity Detection...")
             vad_pipeline = init_vad_pipeline(settings.HUGGINGFACE_TOKEN)
             print("\n=== Voice Chat Bot Initializing ===")
-            print("Device being used:", generator.device)
+            print("Using Google TTS for voice generation")
             print("\nInitializing voice generator...")
-            result = generator.initialize(settings.TTS_MODEL, settings.VOICE_NAME)
+            result = generator.initialize(None, settings.VOICE_NAME)
             print(result)
             speed = settings.SPEED
             try:
