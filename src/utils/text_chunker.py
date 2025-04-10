@@ -32,9 +32,46 @@ class TextChunker:
             ",": 3,
             "-": 2,
         }
+        self.abbreviations = {
+            "Mr.": "Mr",
+            "Mrs.": "Mrs",
+            "Dr.": "Dr",
+            "Ms.": "Ms",
+            "Prof.": "Prof",
+            "Sr.": "Sr",
+            "Jr.": "Jr",
+            "vs.": "vs",
+            "etc.": "etc",
+            "i.e.": "ie",
+            "e.g.": "eg",
+            "a.m.": "am",
+            "p.m.": "pm",
+        }
+
+    def is_complete_sentence(self, text: str) -> bool:
+        """Check if the text contains a complete sentence.
+        
+        Args:
+            text (str): The text to check.
+            
+        Returns:
+            bool: True if the text contains a complete sentence, False otherwise.
+        """
+        # Handle abbreviations
+        for abbr, repl in self.abbreviations.items():
+            text = text.replace(abbr, repl)
+
+        # Check for sentence-ending punctuation
+        if any(text.endswith(p) for p in [".", "!", "?"]):
+            # Make sure it's not an abbreviation
+            last_word = text.split()[-1].lower()
+            if not any(last_word.startswith(abbr.lower()) for abbr in self.abbreviations):
+                return True
+
+        return False
 
     def should_process(self, text: str) -> bool:
-        """Determines if text should be processed based on length or punctuation.
+        """Determines if text should be processed based on complete sentences.
 
         Args:
             text (str): The text to check.
@@ -42,19 +79,11 @@ class TextChunker:
         Returns:
             bool: True if the text should be processed, False otherwise.
         """
-        if any(text.endswith(p) for p in self.punctuation_priorities):
-            return True
-
-        words = text.split()
-        target = (
-            settings.FIRST_SENTENCE_SIZE
-            if not self.found_first_sentence
-            else settings.TARGET_SIZE
-        )
-        return len(words) >= target
+        # Only process if we have a complete sentence
+        return self.is_complete_sentence(text)
 
     def find_break_point(self, words: list, target_size: int) -> int:
-        """Finds optimal break point in text.
+        """Finds optimal break point in text, prioritizing complete sentences.
 
         Args:
             words (list): The list of words to find a break point in.
@@ -66,24 +95,16 @@ class TextChunker:
         if len(words) <= target_size:
             return len(words)
 
-        break_points = []
-
+        # First, look for sentence-ending punctuation
         for i, word in enumerate(words[: target_size + 3]):
-            word_lower = word.lower()
+            if any(word.endswith(p) for p in [".", "!", "?"]):
+                # Check if it's not an abbreviation
+                word_lower = word.lower()
+                if not any(word_lower.startswith(abbr.lower()) for abbr in self.abbreviations):
+                    return i + 1
 
-            priority = self.semantic_breaks.get(word_lower, 0)
-            for punct, punct_priority in self.punctuation_priorities.items():
-                if word.endswith(punct):
-                    priority = max(priority, punct_priority)
-
-            if priority > 0:
-                break_points.append((i, priority, -abs(i - target_size)))
-
-        if not break_points:
-            return target_size
-
-        break_points.sort(key=lambda x: (x[1], x[2]), reverse=True)
-        return break_points[0][0] + 1
+        # If no complete sentence found, return the full text
+        return len(words)
 
     def process(self, text: str, audio_queue) -> str:
         """Process text chunk and return remaining text.
@@ -102,19 +123,22 @@ class TextChunker:
         if not words:
             return ""
 
-        target_size = (
-            settings.FIRST_SENTENCE_SIZE
-            if not self.found_first_sentence
-            else settings.TARGET_SIZE
-        )
-        split_point = self.find_break_point(words, target_size)
+        # Find the last complete sentence
+        last_sentence_end = 0
+        for i, word in enumerate(words):
+            if any(word.endswith(p) for p in [".", "!", "?"]):
+                # Check if it's not an abbreviation
+                word_lower = word.lower()
+                if not any(word_lower.startswith(abbr.lower()) for abbr in self.abbreviations):
+                    last_sentence_end = i + 1
 
-        if split_point:
-            chunk = " ".join(words[:split_point]).strip()
+        if last_sentence_end > 0:
+            # Process the complete sentence
+            chunk = " ".join(words[:last_sentence_end]).strip()
             if chunk and any(c.isalnum() for c in chunk):
                 chunk = chunk.rstrip(",")
                 audio_queue.add_sentences([chunk])
                 self.found_first_sentence = True
-                return " ".join(words[split_point:]) if split_point < len(words) else ""
+                return " ".join(words[last_sentence_end:]) if last_sentence_end < len(words) else ""
 
-        return ""
+        return text  # Return the full text if no complete sentence found

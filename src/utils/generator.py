@@ -6,15 +6,15 @@ from .voice import split_into_sentences
 
 class VoiceGenerator:
     """
-    A class to manage voice generation using Google TTS.
+    A class to manage voice generation using OpenAI TTS.
     """
 
     def __init__(self, api_key: str, base_url: str = "https://api.openai.com/v1"):
         """
-        Initializes the VoiceGenerator with Google TTS.
+        Initializes the VoiceGenerator with OpenAI TTS.
 
         Args:
-            api_key (str): Google API key
+            api_key (str): OpenAI API key
             base_url (str): Base URL for the API
         """
         self.tts = GoogleTTS(api_key, base_url)
@@ -23,21 +23,21 @@ class VoiceGenerator:
 
     def initialize(self, model_path: str, voice_name: str) -> str:
         """
-        Sets the voice name for Google TTS.
+        Sets the voice name for OpenAI TTS.
 
         Args:
-            model_path (str): Not used for Google TTS
+            model_path (str): Not used for OpenAI TTS
             voice_name (str): The name of the voice to use
 
         Returns:
             str: A message indicating the voice has been set.
         """
         self.voice_name = voice_name
-        return f"Using Google TTS voice: {voice_name}"
+        return f"Using OpenAI TTS voice: {voice_name}"
 
     def list_available_voices(self) -> List[str]:
         """
-        Lists available Google TTS voices.
+        Lists available OpenAI TTS voices.
 
         Returns:
             list: A list of available voice names.
@@ -49,7 +49,7 @@ class VoiceGenerator:
         Checks if the generator is properly initialized.
 
         Returns:
-            bool: Always True for Google TTS
+            bool: Always True for OpenAI TTS
         """
         return self._initialized
 
@@ -63,11 +63,11 @@ class VoiceGenerator:
         return_chunks: bool = False,
     ) -> Tuple[Optional[np.ndarray], List[str]]:
         """
-        Generates speech from the given text using Google TTS.
+        Generates speech from the given text using OpenAI TTS.
 
         Args:
             text (str): The text to generate speech from.
-            lang (str, optional): Not used for Google TTS.
+            lang (str, optional): Not used for OpenAI TTS.
             speed (float, optional): The speed of speech generation. Defaults to 1.0.
             pause_duration (int, optional): The duration of pause between sentences in milliseconds. Defaults to 4000.
             short_text_limit (int, optional): The character limit for considering text as short. Defaults to 200.
@@ -77,7 +77,7 @@ class VoiceGenerator:
             tuple: A tuple containing the generated audio (numpy array or list of numpy arrays) and an empty list of phonemes.
         """
         if not self.is_initialized():
-            raise RuntimeError("Google TTS not initialized")
+            raise RuntimeError("OpenAI TTS not initialized")
 
         text = text.strip()
         if not text:
