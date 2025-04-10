@@ -13,17 +13,7 @@ import socket
 import sys
 import atexit
 import time
-
-# Find an available port
-def find_available_port(start_port=5000, max_port=6000):
-    for port in range(start_port, max_port):
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('127.0.0.1', port))
-                return port
-        except OSError:
-            continue
-    raise RuntimeError("No available ports found")
+import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -141,14 +131,17 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     try:
-        port = find_available_port()
-        print(f"\nStarting server on port {port}")
-        print("Open your browser and navigate to: http://localhost:" + str(port))
+        # Get port from environment variable or use default
+        port = int(os.environ.get('PORT', 8000))
+        host = '0.0.0.0'  # Allow external connections
+        
+        print(f"\nStarting server on {host}:{port}")
+        print("The server is now accessible from your local machine")
         print("Press CTRL+C to stop the server")
         
-        # Run the server without debug mode
+        # Run the server
         socketio.run(app, 
-                    host='127.0.0.1',
+                    host=host,
                     port=port,
                     debug=False,
                     allow_unsafe_werkzeug=True)

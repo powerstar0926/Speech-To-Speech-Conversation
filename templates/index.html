@@ -3,175 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speech To Speech Model</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>Speech-to-Speech Chat</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
         .chat-container {
-            height: calc(100vh - 200px);
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
         .message {
-            max-width: 80%;
-            margin: 10px;
+            margin-bottom: 10px;
             padding: 10px;
-            border-radius: 10px;
-            white-space: pre-wrap;
+            border-radius: 5px;
         }
         .user-message {
             background-color: #e3f2fd;
-            margin-left: auto;
+            margin-left: 20%;
         }
         .ai-message {
             background-color: #f5f5f5;
-            margin-right: auto;
+            margin-right: 20%;
         }
-        .recording-indicator {
-            animation: pulse 1.5s infinite;
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
         }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .start-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .stop-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .recording {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .not-recording {
+            background-color: #e8f5e9;
+            color: #2e7d32;
         }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold text-center mb-8">Speech To Speech Model</h1>
-        
-        <div class="bg-white rounded-lg shadow-lg p-4 chat-container overflow-y-auto" id="chatContainer">
-            <!-- Messages will be added here -->
+<body>
+    <div class="chat-container">
+        <h1>Speech-to-Speech Chat</h1>
+        <div class="messages" id="messages"></div>
+        <div class="controls">
+            <button id="startBtn" class="start-btn">Start Recording</button>
+            <button id="stopBtn" class="stop-btn" disabled>Stop Recording</button>
         </div>
-
-        <div class="mt-4 flex justify-center space-x-4">
-            <button id="startRecording" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-                Start Recording
-            </button>
-            <button id="stopRecording" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded hidden">
-                Stop Recording
-            </button>
-        </div>
-
-        <div id="status" class="mt-4 text-center"></div>
+        <div id="status" class="status not-recording">Not Recording</div>
     </div>
 
-    <script>
-        // Get the current port from the URL
-        const port = window.location.port;
-        const socket = io('http://localhost:' + port);
-        
-        const chatContainer = document.getElementById('chatContainer');
-        const startButton = document.getElementById('startRecording');
-        const stopButton = document.getElementById('stopRecording');
-        const statusDiv = document.getElementById('status');
-
-        function addMessage(text, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
-            messageDiv.textContent = text;
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            return messageDiv;
-        }
-
-        startButton.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/start_recording', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const data = await response.json();
-                if (data.status === 'recording started') {
-                    startButton.classList.add('hidden');
-                    stopButton.classList.remove('hidden');
-                    statusDiv.textContent = 'Recording...';
-                    statusDiv.classList.add('recording-indicator');
-                }
-            } catch (error) {
-                console.error('Error starting recording:', error);
-                statusDiv.textContent = 'Error starting recording. Please try again.';
-            }
-        });
-
-        stopButton.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/stop_recording', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const data = await response.json();
-                if (data.status === 'recording stopped') {
-                    stopButton.classList.add('hidden');
-                    startButton.classList.remove('hidden');
-                    statusDiv.textContent = '';
-                    statusDiv.classList.remove('recording-indicator');
-                }
-            } catch (error) {
-                console.error('Error stopping recording:', error);
-                statusDiv.textContent = 'Error stopping recording. Please try again.';
-            }
-        });
-
-        socket.on('connect', () => {
-            console.log('Connected to server');
-            statusDiv.textContent = 'Connected to server';
-            setTimeout(() => {
-                statusDiv.textContent = '';
-            }, 2000);
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-            statusDiv.textContent = 'Disconnected from server';
-            startButton.classList.add('hidden');
-            stopButton.classList.add('hidden');
-        });
-
-        socket.on('user_message', (data) => {
-            addMessage(data.text, true);
-        });
-
-        // Handle streaming AI messages
-        const aiMessages = new Map();
-
-        socket.on('ai_message_start', (data) => {
-            const messageDiv = document.createElement('div');
-            messageDiv.id = data.id;
-            messageDiv.className = 'message ai-message';
-            chatContainer.appendChild(messageDiv);
-            aiMessages.set(data.id, messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        });
-
-        socket.on('ai_message_chunk', (data) => {
-            const messageDiv = aiMessages.get(data.id);
-            if (messageDiv) {
-                messageDiv.textContent += data.text;
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-        });
-
-        socket.on('ai_message_complete', (data) => {
-            aiMessages.delete(data.id);
-        });
-
-        socket.on('interrupted', (data) => {
-            statusDiv.textContent = data.message;
-            setTimeout(() => {
-                statusDiv.textContent = 'Recording...';
-            }, 2000);
-        });
-
-        socket.on('error', (data) => {
-            statusDiv.textContent = `Error: ${data.message}`;
-            statusDiv.classList.remove('recording-indicator');
-            stopButton.classList.add('hidden');
-            startButton.classList.remove('hidden');
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html> 
