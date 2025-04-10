@@ -1,4 +1,5 @@
 flask==2.0.1
+werkzeug==2.0.3
 flask-socketio==5.1.1
 requests==2.26.0
 transformers==4.30.2
@@ -12,3 +13,8 @@ eventlet==0.33.3
 gunicorn==20.1.0
 accelerate==0.20.3
 safetensors==0.3.1
+keyboard
+soundfile
+dotenv
+pydantic_settings
+pyannote.audio

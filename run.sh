@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# Build the Docker image
-echo "Building Docker image..."
-docker build -t speech-app .
+# Activate virtual environment
+source myenv/bin/activate
 
-# Run the container
-echo "Running container..."
-docker run -p 8000:8000 speech-app 
+# Run the application
+python app.py 
