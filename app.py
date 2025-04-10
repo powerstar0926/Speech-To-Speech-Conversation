@@ -143,8 +143,7 @@ if __name__ == '__main__':
         socketio.run(app, 
                     host=host,
                     port=port,
-                    debug=False,
-                    allow_unsafe_werkzeug=True)
+                    debug=False)
     except KeyboardInterrupt:
         print("\nShutting down server...")
         cleanup()
